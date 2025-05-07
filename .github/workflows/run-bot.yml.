@@ -1,0 +1,39 @@
+name: Run Affiliate Bot
+on:
+  schedule:
+    - cron: "0 8 * * *" # 8 AM UTC (1:30 PM IST)
+  workflow_dispatch:
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run GrabOn scraper
+        run: python grabon_scraper.py
+      - name: Run Cuelinks fetcher
+        env:
+          CUELINKS_API_KEY: ${{ secrets.CUELINKS_API_KEY }}
+        run: python cuelinks_fetcher.py
+      - name: Run content generator
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python content_generator.py
+      - name: Run WordPress poster
+        env:
+          WORDPRESS_URL: ${{ secrets.WORDPRESS_URL }}
+          WORDPRESS_USERNAME: ${{ secrets.WORDPRESS_USERNAME }}
+          WORDPRESS_PASSWORD: ${{ secrets.WORDPRESS_PASSWORD }}
+        run: python wordpress_poster.py
+      - name: Commit JSON files
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add grabon_deals.json cuelinks_offers.json posts.json
+          git commit -m "Update deals and posts" || echo "No changes"
+          git push
